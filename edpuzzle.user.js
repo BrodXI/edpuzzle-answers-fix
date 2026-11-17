@@ -1,18 +1,22 @@
 // ==UserScript==
-// @name        edpuzzle-answers script launcher
-// @namespace   edpuzzle.hgci.org
+// @name        BrodXI edpuzzle-answers fork launcher
+// @namespace   github.com/BrodXI/edpuzzle-answers-fix
 // @match       https://edpuzzle.com/*
 // @grant       none
-// @version     1.0.0
+// @version     1.1.0
 // @author      ading2210
-// @description This userscript provides a convenient way to launch the edpuzzle-answers script.
-// @downloadURL https://raw.githubusercontent.com/ading2210/edpuzzle-answers/refs/heads/main/edpuzzle.user.js
+// @description Launch the updated BrodXI Edpuzzle script.
+// @downloadURL https://raw.githubusercontent.com/BrodXI/edpuzzle-answers-fix/refs/heads/main/edpuzzle.user.js
 // ==/UserScript==
 
 function launch_script() {
-  fetch("https://cdn.jsdelivr.net/gh/ading2210/edpuzzle-answers@latest/script.js")
-    .then(r => r.text())
-    .then(r => eval(r));
+  fetch("https://cdn.jsdelivr.net/gh/BrodXI/edpuzzle-answers-fix@main/release/script.js", {cache: "no-cache"})
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
+    })
+    .then(code => (0, eval)(code))
+    .catch(error => alert(`Could not load the Edpuzzle fork: ${error.message}`));
 }
 
 function main() {

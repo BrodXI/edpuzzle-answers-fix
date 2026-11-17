@@ -1,39 +1,36 @@
 //Copyright (C) 2026 ading2210
 //see README.md for more information
 
-//this script mainly just serves to load the rest of the program
+// Load the fork's built browser files, not the original project's mirrors.
 
-let mirrors = ["https://edpuzzle.hgci.org", "https://edpuzzle.librecheats.net"];
+const release_url = "https://cdn.jsdelivr.net/gh/BrodXI/edpuzzle-answers-fix@main/release";
+const public_media_api_url = "https://edpuzzle.hgci.org";
 
-async function try_mirror(mirror) {
-  let r = await fetch(mirror + "/open.js", {cache: "no-cache"});
-  let script = await r.text();
-  window.base_url = mirror;
-  eval(script);
+async function load_fork(asset_url) {
+  const response = await fetch(asset_url + "/open.js", {cache: "no-cache"});
+  if (!response.ok)
+    throw new Error(`Could not download fork launcher (HTTP ${response.status}).`);
+  const code = await response.text();
+  window.base_url = asset_url;
+  // The old public service is a fallback for publicly available media only.
+  // Authentication data is never forwarded to this service.
+  window.media_api_url = public_media_api_url;
+  (0, eval)(code);
 }
 
 async function init() {
-  let mirror_hostnames = mirrors.map(url => new URL(url).hostname);
-  if (mirror_hostnames.includes(window.location.hostname)) {
+  if (window.location.hostname === "cdn.jsdelivr.net") {
     alert(
       "To use this, drag this button into your bookmarks bar. Then, run it when you're on an Edpuzzle assignment."
     );
     return;
   }
-  if (document.dev_env)
-    return try_mirror(document.dev_env);
-
-  for (let mirror of mirrors) {
-    try {
-      await try_mirror(mirror);
-      return;
-    }
-    catch {}
+  try {
+    await load_fork(document.dev_env || release_url);
   }
-
-  alert(
-    "Error: Could not connect to any of the mirrors. Check that they're not blocked."
-  );
+  catch (error) {
+    alert(`Could not load the fork's JavaScript: ${error.message}. The site may block bookmarklets through its Content Security Policy.`);
+  }
 }
 
 init();

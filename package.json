@@ -7,6 +7,7 @@
     "dev": "npx webpack build --watch",
     "build": "npx webpack build",
     "build:prod": "npx webpack build --mode=production",
+    "release": "npm run build:prod && node scripts/prepare-release.cjs",
     "test": "node --test"
   },
   "repository": {

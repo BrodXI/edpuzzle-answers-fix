@@ -57,6 +57,7 @@ function open_popup(html) {
 
 function write_popup(popup, html) {
   popup.document.base_url = base_url;
+  popup.document.media_api_url = window.media_api_url || base_url;
   popup.document.edpuzzle_data = window.__EDPUZZLE_DATA__;
   popup.document.gpl_text = gpl_text;
   popup.document.write(html);

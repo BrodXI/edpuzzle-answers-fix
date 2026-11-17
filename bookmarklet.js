@@ -1,1 +1,1 @@
-javascript: fetch("https://cdn.jsdelivr.net/gh/ading2210/edpuzzle-answers@latest/script.js").then(r => r.text()).then(r => eval(r))
+javascript:(()=>{fetch("https://cdn.jsdelivr.net/gh/BrodXI/edpuzzle-answers-fix@main/release/script.js",{cache:"no-cache"}).then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.text()}).then(code=>(0,eval)(code)).catch(error=>alert("Could not load Edpuzzle fork: "+error.message))})();

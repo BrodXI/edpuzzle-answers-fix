@@ -45,7 +45,7 @@ Note: This video was recorded with an older version of the script, so the GUI sh
 - Has an option to prevent auto-pausing the video when the tab is hidden
 - Shows various stats about the assignment
 - Has a decent looking GUI
-- No login or extension required
+- Uses the existing Edpuzzle browser login, rather than asking for your password
 - Uses about:blank so it doesn't go into your browser history
 - Supports Edpuzzles embedded in Canvas and Schoology
 - This fork first attempts media access through your own signed-in Edpuzzle browser session, including assignments your account is allowed to view. Login credentials are not sent to the project's media proxy.
@@ -56,7 +56,7 @@ Note: This video was recorded with an older version of the script, so the GUI sh
 - This doesn't currently work for most Edpuzzles that are embedded in a third party site. However, the script does work for Edpuzzles embeded in Canvas and Schoology.
 - **Private assignments:** Account-based access can display question data returned to your signed-in browser. A learner account may not be authorized to read the correct answers. In that case, questions remain visible, but verified-answer highlighting and automatic answering are unavailable. Logging in does not grant teacher permissions or reveal protected answer keys.
 - **Browser support:** The existing bookmarklet may be blocked by Edpuzzle's Content Security Policy. This change does not remove that limitation or require collecting passwords.
-- **Fork deployment:** The upstream bookmarklet, userscript, and mirrors still run the original code. To use these changes, build and serve this fork's `dist/` directory (and optionally its backend) from your own HTTPS host. Before launching this fork's `script.js`, set `document.dev_env` to your host's HTTPS origin. See the server instructions below. Do not enter an Edpuzzle password into a third-party site.
+- **Fork deployment:** `bookmarklet.js` and `edpuzzle.user.js` load this fork's tracked `release/` browser assets through jsDelivr. For immediate updates after a merge, jsDelivr may temporarily serve a cached version. Build the release files with `npm run release` before committing. The optional legacy public media fallback still calls `edpuzzle.hgci.org` without your login cookies or tokens. Do not enter an Edpuzzle password into a third-party site.
 
 ## Copyright Notice:
 
@@ -92,16 +92,16 @@ A video tutorial can be found [here](https://www.youtube.com/watch?v=zxZzB2KXCkw
 
 ### Method 1:
 
-1. Navigate to [https://edpuzzle.hgci.org](https://edpuzzle.hgci.org).
-2. If you're on any Chromium-based browser (Chrome, Edge, Opera, Brave, etc), drag the button at the bottom of the page into your bookmarks bar.
-3. If you're on Firefox, right click on the button and then click "bookmark link."
+1. Open the `bookmarklet.js` file in this repository.
+2. Create a new browser bookmark and paste the one-line `javascript:` URL as its address.
+3. On an Edpuzzle assignment page, click that bookmark.
 
 ### Method 2:
 
 1. Copy the following code into your clipboard:
 
 ```js
-javascript: fetch("https://cdn.jsdelivr.net/gh/ading2210/edpuzzle-answers@latest/script.js").then(r => r.text()).then(r => eval(r));
+javascript:(()=>{fetch("https://cdn.jsdelivr.net/gh/BrodXI/edpuzzle-answers-fix@main/release/script.js",{cache:"no-cache"}).then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.text()}).then(code=>(0,eval)(code)).catch(error=>alert("Could not load Edpuzzle fork: "+error.message))})();
 ```
 
 2. Right click on your bookmarks bar and click "add page."
@@ -115,7 +115,7 @@ javascript: fetch("https://cdn.jsdelivr.net/gh/ading2210/edpuzzle-answers@latest
 
 ### On Regular Edpuzzles:
 
-1. Navigate to any Edpuzzle assignment.
+1. Sign into your own Edpuzzle account and navigate to an assignment it can access.
 2. Make sure the url follows this format: `https://edpuzzle.com/assignments/{id}/watch`
 3. Click on the bookmarklet to run the script.
 4. If it doesn't work, make sure you allow popups from edpuzzle.com, then try again.

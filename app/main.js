@@ -11,6 +11,7 @@ window.real_location = new URL(opener.real_location.href);
 
 const gpl_text = document.gpl_text;
 export const base_url = document.base_url;
+const media_api_url = document.media_api_url || base_url;
 export const edpuzzle_data = document.edpuzzle_data || {};
 const lti_edpuzzle = window.real_location.pathname.includes("/lms/lti");
 const csrf_cache = {
@@ -252,7 +253,7 @@ async function get_media() {
     fetchAccount: fetch_with_auth,
     fetchPublic: async id => {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const r = await fetch_with_auth(base_url + `/api/media/${encodeURIComponent(id)}`);
+        const r = await fetch_with_auth(media_api_url + `/api/media/${encodeURIComponent(id)}`);
         const data = await r.json();
         if (data.captcha_needed) {
           const captcha_token = await captcha.complete_captcha();

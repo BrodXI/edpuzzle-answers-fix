@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "npx webpack build --watch",
     "build": "npx webpack build",
-    "build:prod": "npx webpack build --mode=production"
+    "build:prod": "npx webpack build --mode=production",
+    "test": "node --test"
   },
   "repository": {
     "type": "git",

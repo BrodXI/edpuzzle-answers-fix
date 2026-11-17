@@ -238,18 +238,24 @@ function format_popup() {
 
 async function get_media() {
   let media_id;
+  let assigned_media;
   if (assignment_mode == "new") {
     let filtered = assignment.assignment.attachments.filter((attachment) => {
       return attachment.id == attachment_id;
     });
+    if (!filtered.length)
+      throw new Error("The selected assignment attachment could not be found.");
+    assigned_media = filtered[0];
     media_id = filtered[0].contentId;
   }
   else {
+    assigned_media = assignment.medias?.[0];
     media_id = assignment.teacherAssignments[0].contentId;
   }
 
   const result = await loadMedia({
     mediaId: media_id,
+    assignmentMedia: assigned_media,
     fetchAccount: fetch_with_auth,
     fetchPublic: async id => {
       for (let attempt = 0; attempt < 3; attempt++) {

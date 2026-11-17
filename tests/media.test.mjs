@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {hasVerifiedAnswers, loadMedia} from "../app/media.mjs";
+import {hasDisplayableQuestions, hasVerifiedAnswers, loadMedia} from "../app/media.mjs";
 
 const question = (correct = false) => ({
   type: "multiple-choice",
@@ -71,7 +71,33 @@ test("does not pretend inaccessible private media loaded", async () => {
     mediaId: "123",
     fetchAccount: async () => response(403, {}),
     fetchPublic: async () => { throw new Error("HTTP 403"); }
-  }), /HTTP 403/);
+  }), /media API can have different permissions/);
+});
+
+test("uses learner-visible questions embedded in the assignment after both 403s", async () => {
+  const visibleQuestion = {...question(false), time: 20, body: [{text: "Learner-visible question"}]};
+  visibleQuestion.choices = visibleQuestion.choices.map(choice => ({
+    ...choice, body: [{text: "An option"}]
+  }));
+  const result = await loadMedia({
+    mediaId: "private123",
+    assignmentMedia: {content: {questions: [visibleQuestion]}},
+    fetchAccount: async () => response(403, {}),
+    fetchPublic: async () => { throw new Error("HTTP 403"); }
+  });
+  assert.equal(result.source, "assignment-limited");
+  assert.equal(result.media.questions.length, 1);
+  assert.equal(hasVerifiedAnswers(result.media.questions), false);
+});
+
+test("rejects incomplete embedded questions rather than showing fake data", async () => {
+  assert.equal(hasDisplayableQuestions([{type: "multiple-choice", choices: []}]), false);
+  await assert.rejects(loadMedia({
+    mediaId: "private123",
+    assignmentMedia: {questions: [question(false)]},
+    fetchAccount: async () => response(403, {}),
+    fetchPublic: async () => { throw new Error("HTTP 403"); }
+  }), /media API can have different permissions/);
 });
 
 test("rejects missing media IDs before making network calls", async () => {

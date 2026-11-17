@@ -51,6 +51,30 @@ Note: This video was recorded with an older version of the script, so the GUI sh
 - This fork first attempts media access through your own signed-in Edpuzzle browser session, including assignments your account is allowed to view. Login credentials are not sent to the project's media proxy.
 - Licensed under the GNU AGPL v3 license
 
+### Free, self-contained companion bookmarklet (private-assignment friendly)
+
+If the answer-fetching app returns a private-media HTTP 403, use the alternative
+`companion/companion.bookmarklet.txt` bookmarklet instead. It does **not** call
+Edpuzzle's private media API or rely on the paid Examripper service:
+
+1. Open `companion/companion.bookmarklet.txt` and copy its entire `javascript:` line.
+2. Create a bookmark in Chrome/Edge and paste that line into the bookmark URL.
+3. Open a lesson you can access on edpuzzle.com and activate the bookmark.
+
+Features: a compact overlay with video speed/playback/seek controls for accessible
+HTML video, capture of a selected or visible question, import of browser-accessible
+captions, keyword-ranked transcript excerpts, and optional **free on-device AI**
+explanations when the browser exposes `LanguageModel` (see [Chrome's Prompt API](https://developer.chrome.com/docs/ai/prompt-api)).
+The AI model may require an initial download and might not be available on your browser,
+device or school account. No external service receives your question, password or tokens.
+
+Limitations: inaccessible cross-origin video embeds cannot be controlled, hidden
+private answer keys cannot be retrieved, and neither AI suggestions nor seeking
+guarantee correct answers or assignment completion. You can still paste a transcript
+and manually copy the question when captions/DOM extraction is unavailable.
+
+To rebuild the one-line bookmarklet after modifying its source: `npm run companion`.
+
 ## Limitations:
 
 - This doesn't currently work for most Edpuzzles that are embedded in a third party site. However, the script does work for Edpuzzles embeded in Canvas and Schoology.

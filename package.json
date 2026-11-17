@@ -8,6 +8,7 @@
     "build": "npx webpack build",
     "build:prod": "npx webpack build --mode=production",
     "release": "npm run build:prod && node scripts/prepare-release.cjs",
+    "companion": "node scripts/build-companion.cjs",
     "test": "node --test"
   },
   "repository": {
@@ -24,6 +25,7 @@
   "devDependencies": {
     "copy-webpack-plugin": "^14.0.0",
     "dprint": "^0.54.0",
+    "terser": "^5.51.2",
     "webpack": "^5.106.2",
     "webpack-cli": "^7.0.2"
   }

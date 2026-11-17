@@ -5,12 +5,13 @@ import * as auto_answers from "./autoanswers.js";
 import * as video_options from "./videooptions.js";
 import * as open_ended from "./openended.js";
 import * as captcha from "./captcha.js";
+import {hasVerifiedAnswers, loadMedia} from "./media.mjs";
 
-window.real_location = JSON.parse(JSON.stringify(opener.real_location));
+window.real_location = new URL(opener.real_location.href);
 
 const gpl_text = document.gpl_text;
 export const base_url = document.base_url;
-export const edpuzzle_data = document.edpuzzle_data;
+export const edpuzzle_data = document.edpuzzle_data || {};
 const lti_edpuzzle = window.real_location.pathname.includes("/lms/lti");
 const csrf_cache = {
   latest: null,
@@ -45,13 +46,15 @@ export var assignment_mode = null;
 var attachment_id = null;
 
 export function fetch_with_auth(url, options = {}) {
-  if (edpuzzle_data && edpuzzle_data.token && (new URL(url).hostname) == "edpuzzle.com") {
-    if (!options.headers) options.headers = {};
-    options.headers["authorization"] = edpuzzle_data.token;
+  const target = new URL(url, window.real_location.href);
+  const headers = new Headers(options.headers || {});
+  if (edpuzzle_data.token && target.origin === "https://edpuzzle.com" && !headers.has("authorization")) {
+    headers.set("authorization", edpuzzle_data.token);
   }
+  const requestOptions = {...options, headers};
   if (window.opener)
-    return opener.fetch(url, options);
-  return fetch(url, options);
+    return opener.fetch(target.href, requestOptions);
+  return fetch(target.href, requestOptions);
 }
 
 export function sanitize_html(str) {
@@ -110,9 +113,10 @@ export async function construct_headers() {
     "accept_language": "en-US,en;q=0.9",
     "content-type": "application/json",
     "x-csrf-token": await get_csrf(),
-    "x-edpuzzle-referrer": window.real_location.href,
-    "x-edpuzzle-web-version": edpuzzle_data.version
+    "x-edpuzzle-referrer": window.real_location.href
   };
+  if (edpuzzle_data.version)
+    headers["x-edpuzzle-web-version"] = edpuzzle_data.version;
   if (lti_edpuzzle) {
     let lti_credentials = get_lti_credentials();
     headers["authorization"] = lti_credentials.user_token;
@@ -142,6 +146,8 @@ export async function get_attempt() {
     let filtered = assignment.assignmentLearner.submissions.filter((submission) => {
       return submission.attachmentId == attachment_id;
     });
+    if (!filtered.length)
+      throw new Error("There is no attempt for the selected attachment yet.");
     attempt_url = `https://edpuzzle.com/api/v3/learning/submissions/${filtered[0].id}`;
   }
   else {
@@ -202,30 +208,31 @@ function format_popup() {
       );
     }
     teacher_assignment = assignment.assignmentLearner;
-    thumbnail = media.thumbnailUrl;
-    author_name = teacher_assignment.enrolledBy.fullName;
+    thumbnail = media.thumbnailUrl || "";
+    author_name = teacher_assignment.enrolledBy?.fullName || "Unknown";
   }
   else {
     media = assignment.medias[0];
     teacher_assignment = assignment.teacherAssignments[0].preferences;
-    thumbnail = media.thumbnailURL;
-    author_name = media.user.name;
+    thumbnail = media.thumbnailURL || "";
+    author_name = media.user?.name || "Unknown";
   }
 
   if (thumbnail.startsWith("/"))
     thumbnail = "https://" + window.real_location.hostname + thumbnail;
 
   let deadline_text;
-  if (teacher_assignment.dueDate == "")
+  if (!teacher_assignment.dueDate)
     deadline_text = "No due date";
   else
     deadline_text = "Due on " + (new Date(teacher_assignment.dueDate)).toDateString();
 
-  document.getElementById("title").innerHTML = `Answers for: ${media.title}`;
-  document.getElementById("assignment_title").innerHTML = media.title;
-  document.getElementById("assignment_author").innerHTML = author_name;
-  document.getElementById("assignment_end").innerHTML = deadline_text;
-  document.getElementById("thumbnail_img").src = thumbnail;
+  document.getElementById("title").textContent = `Questions for: ${media.title || "Untitled media"}`;
+  document.getElementById("assignment_title").textContent = media.title || "Untitled media";
+  document.getElementById("assignment_author").textContent = author_name;
+  document.getElementById("assignment_end").textContent = deadline_text;
+  if (thumbnail)
+    document.getElementById("thumbnail_img").src = thumbnail;
 }
 
 async function get_media() {
@@ -240,30 +247,46 @@ async function get_media() {
     media_id = assignment.teacherAssignments[0].contentId;
   }
 
-  let r = await fetch_with_auth(base_url + `/api/media/${media_id}`);
-  media = await r.json();
-
-  if (media.captcha_needed) {
-    let captcha_token = await captcha.complete_captcha();
-    await captcha.submit_captcha(captcha_token);
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    return await get_media();
-  }
-
-  if (r.status !== 200) {
-    let error_msg = `${media.error}:\n${media.message}`;
-    throw new Error(error_msg);
-  }
-
+  const result = await loadMedia({
+    mediaId: media_id,
+    fetchAccount: fetch_with_auth,
+    fetchPublic: async id => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const r = await fetch_with_auth(base_url + `/api/media/${encodeURIComponent(id)}`);
+        const data = await r.json();
+        if (data.captcha_needed) {
+          const captcha_token = await captcha.complete_captcha();
+          if (!await captcha.submit_captcha(captcha_token))
+            throw new Error("The public service could not verify its captcha.");
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          continue;
+        }
+        if (!r.ok)
+          throw new Error(`${data.error || "Media service error"}: ${data.message || `HTTP ${r.status}`}`);
+        return data;
+      }
+      throw new Error("The public media service is still requesting verification.");
+    }
+  });
+  media = result.media;
+  console.info(`Loaded assignment media via ${result.source}.`);
   questions = media.questions;
   return questions;
 }
 
 //associates user responses with their corresponding questions.
 async function get_responses(questions) {
-  let attempt = await get_attempt();
+  let attempt;
+  try {
+    attempt = await get_attempt();
+  }
+  catch (error) {
+    console.warn("Attempt information is not available; displaying questions only.", error);
+    return questions;
+  }
+  const answers = Array.isArray(attempt.answers) ? attempt.answers : [];
   for (let question of questions) {
-    for (let answer of attempt.answers) {
+    for (let answer of answers) {
       if (answer.questionId == question._id) {
         question.response = answer;
         break;
@@ -279,23 +302,6 @@ async function get_responses(questions) {
 async function get_questions() {
   questions = await get_media();
   questions = await get_responses(questions);
-
-  //validate the questions to make sure they all have an answer listed
-  for (let question of questions) {
-    if (question.type !== "multiple-choice") continue;
-    let correct_found = false;
-    for (let choice of question.choices) {
-      if (choice.isCorrect) {
-        correct_found = true;
-        break;
-      }
-    }
-    if (!correct_found) {
-      throw new Error(
-        "Some questions have invalid data. The assignment might be a private one, so the answers cannot be extracted."
-      );
-    }
-  }
 }
 
 //display the questions onto the popup
@@ -369,8 +375,10 @@ function parse_questions() {
   content_loaded = true;
 
   skipper_button.disabled = false;
-  if (questions.length == 0)
-    status_text.innerHTML = "No valid multiple choice questions were found.";
+  if (questions.length === 0)
+    status_text.textContent = "No questions were found in this assignment.";
+  else if (!hasVerifiedAnswers(questions))
+    status_text.textContent = "Questions loaded, but Edpuzzle did not provide verified answers for every multiple-choice question. You can review the questions, but automatic answering is unavailable.";
   else {
     status_text.classList.add("hidden");
     answers_button.disabled = false;

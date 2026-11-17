@@ -48,11 +48,15 @@ Note: This video was recorded with an older version of the script, so the GUI sh
 - No login or extension required
 - Uses about:blank so it doesn't go into your browser history
 - Supports Edpuzzles embedded in Canvas and Schoology
+- This fork first attempts media access through your own signed-in Edpuzzle browser session, including assignments your account is allowed to view. Login credentials are not sent to the project's media proxy.
 - Licensed under the GNU AGPL v3 license
 
 ## Limitations:
 
 - This doesn't currently work for most Edpuzzles that are embedded in a third party site. However, the script does work for Edpuzzles embeded in Canvas and Schoology.
+- **Private assignments:** Account-based access can display question data returned to your signed-in browser. A learner account may not be authorized to read the correct answers. In that case, questions remain visible, but verified-answer highlighting and automatic answering are unavailable. Logging in does not grant teacher permissions or reveal protected answer keys.
+- **Browser support:** The existing bookmarklet may be blocked by Edpuzzle's Content Security Policy. This change does not remove that limitation or require collecting passwords.
+- **Fork deployment:** The upstream bookmarklet, userscript, and mirrors still run the original code. To use these changes, build and serve this fork's `dist/` directory (and optionally its backend) from your own HTTPS host. Before launching this fork's `script.js`, set `document.dev_env` to your host's HTTPS origin. See the server instructions below. Do not enter an Edpuzzle password into a third-party site.
 
 ## Copyright Notice:
 
